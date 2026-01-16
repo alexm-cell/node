@@ -1,0 +1,34 @@
+name: Docker Build + Trivy Scan (C14)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: |
+        docker build -t myapp:latest .
+
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget
+        wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.0_Linux-64bit.deb
+        sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
+
+    - name: Trivy Scan HIGH & CRITICAL + cat output
+      run: |
+        trivy image \
+          --severity HIGH,CRITICAL \
+          --format table \
+          --no-progress \
+          myapp:latest > trivy-report.txt
+
+        echo "===== TRIVY VULNERABILITY REPORT ====="
+        cat trivy-report.txt
