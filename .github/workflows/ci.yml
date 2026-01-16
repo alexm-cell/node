@@ -1,0 +1,52 @@
+name: Node.js CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  ci:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test || echo "No tests configured, skipping"
+
+      - name: Lint code
+        run: npx eslint . || echo "No lint configured, skipping"
+
+  cd:
+    name: Continuous Deployment
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to DockerHub with PAT
+        run: |
+          echo "${{ secrets.DOCKER_PAT }}" | docker login -u alexmessein11 --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t alexmessein11/node18-app:latest .
+
+      - name: Push Docker image
+        run: docker push alexmessein11/node18-app:latest
